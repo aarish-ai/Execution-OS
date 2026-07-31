@@ -4,6 +4,8 @@ export interface MeetingSummary {
   summary?: string;
   health_score?: number;
   meeting_date: string;
+  created_at: string;
+  contradictions_count: number;
 }
 
 export interface TranscriptChunk {
@@ -15,15 +17,19 @@ export interface TranscriptChunk {
 
 export interface Decision {
   id: string;
+  meeting_id: string;
+  topic_id?: string;
   content: string;
   owner?: string;
   rationale?: string;
   source_quote: string;
   transcript_position: number;
+  created_at?: string;
 }
 
-export interface TaskItem {
+export interface Task {
   id: string;
+  meeting_id: string;
   owner: string;
   description: string;
   deadline?: string;
@@ -38,26 +44,24 @@ export interface OpenQuestion {
   raised_by?: string;
   resolved: boolean;
   carried_forward_from?: string;
+  transcript_position: number;
 }
 
 export interface ContradictionAlert {
   id: string;
+  meeting_id: string;
   prior_decision_id: string;
   conflicting_quote: string;
   explanation: string;
   dismissed: boolean;
 }
 
-export interface MeetingDetail {
-  id: string;
-  title: string;
+export interface MeetingDetail extends MeetingSummary {
   raw_transcript: string;
-  summary?: string;
-  health_score?: number;
-  meeting_date: string;
+  updated_at: string;
   chunks: TranscriptChunk[];
   decisions: Decision[];
-  tasks: TaskItem[];
+  tasks: Task[];
   open_questions: OpenQuestion[];
   contradictions: ContradictionAlert[];
 }
@@ -68,88 +72,151 @@ export interface SearchResult {
   meeting_title: string;
   speaker?: string;
   content: string;
-  score: number;
   chunk_index: number;
+  score: number;
 }
 
-export interface AskResponse {
-  answer: string;
-  sources: {
-    meeting_id: string;
-    meeting_title: string;
-    chunk_index: number;
-    speaker?: string;
-    content: string;
-  }[];
+export interface DriftAlert {
+  id: string;
+  topic_name: string;
+  topic_id?: string;
+  meeting_count: number;
+  resolved: boolean;
+  last_seen: string;
+  created_at: string;
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+export interface TopicDetail {
+  id: string;
+  name: string;
+  occurrence_count: number;
+  meetings: Array<{ id: string; title: string; date?: string }>;
+  decisions: Array<{ id: string; content: string; owner?: string; created_at?: string }>;
+  created_at: string;
+}
+
+const BASE_URL = '/api/v1';
 
 async function fetcher<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const apiKey = process.env.NEXT_PUBLIC_API_KEY;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options?.headers as Record<string, string>),
+  };
+  if (apiKey) {
+    headers['X-API-Key'] = apiKey;
+  }
+
   const res = await fetch(`${BASE_URL}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-    },
     ...options,
+    headers,
   });
 
   if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`API error ${res.status}: ${errorText}`);
-  }
-
-  if (res.status === 204) {
-    return {} as T;
+    const errorBody = await res.text().catch(() => '');
+    throw new Error(`API error (${res.status}): ${errorBody || res.statusText}`);
   }
 
   return res.json();
 }
 
 export const api = {
-  getMeetings: () => fetcher<MeetingSummary[]>('/meetings/'),
-  getMeeting: (id: string) => fetcher<MeetingDetail>(`/meetings/${id}`),
   createMeeting: (title: string, raw_transcript: string) =>
     fetcher<MeetingSummary>('/meetings/', {
       method: 'POST',
       body: JSON.stringify({ title, raw_transcript }),
     }),
+
+  getMeetings: () => fetcher<MeetingSummary[]>('/meetings/'),
+
+  getMeeting: (id: string) => fetcher<MeetingDetail>(`/meetings/${id}`),
+
   deleteMeeting: (id: string) =>
     fetcher<void>(`/meetings/${id}`, { method: 'DELETE' }),
+
+  getMeetingBrief: (id: string) =>
+    fetcher<{ brief: string }>(`/meetings/${id}/brief`),
+
+  getMeetingHealth: (id: string) =>
+    fetcher<{
+      meeting_id: string;
+      health_score: number;
+      decisions_count: number;
+      tasks_count: number;
+      questions_count: number;
+    }>(`/meetings/${id}/health`),
 
   getTasks: (owner?: string, status?: string) => {
     const params = new URLSearchParams();
     if (owner) params.append('owner', owner);
     if (status) params.append('status', status);
-    return fetcher<TaskItem[]>(`/tasks/?${params.toString()}`);
+    const q = params.toString();
+    return fetcher<Task[]>(`/tasks/${q ? `?${q}` : ''}`);
   },
-  getOverdueTasks: () => fetcher<TaskItem[]>('/tasks/overdue'),
-  updateTask: (id: string, updates: { status?: string; deadline?: string }) =>
-    fetcher<TaskItem>(`/tasks/${id}`, {
+
+  updateTaskStatus: (id: string, status: Task['status']) =>
+    fetcher<Task>(`/tasks/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(updates),
+      body: JSON.stringify({ status }),
     }),
 
   getDecisions: (owner?: string) => {
-    const params = new URLSearchParams();
-    if (owner) params.append('owner', owner);
-    return fetcher<Decision[]>(`/decisions/?${params.toString()}`);
+    const q = owner ? `?owner=${encodeURIComponent(owner)}` : '';
+    return fetcher<Decision[]>(`/decisions/${q}`);
   },
 
-  search: (query: string, meeting_id?: string, top_k = 5) =>
-    fetcher<SearchResult[]>('/search/', {
+  search: (query: string, top_k: number = 5) =>
+    fetcher<SearchResult[]>(`/search/?query=${encodeURIComponent(query)}&top_k=${top_k}`),
+
+  ask: (query: string) =>
+    fetcher<{ answer: string; sources: SearchResult[] }>('/search/ask', {
       method: 'POST',
-      body: JSON.stringify({ query, meeting_id, top_k }),
+      body: JSON.stringify({ query }),
     }),
 
-  ask: (question: string) =>
-    fetcher<AskResponse>('/search/ask', {
-      method: 'POST',
-      body: JSON.stringify({ question }),
-    }),
+  getWeeklyBrief: () =>
+    fetcher<{ id: string; content: string; week_start: string; week_end: string; created_at: string }>(
+      '/briefs/weekly/latest'
+    ),
 
-  getWeeklyBrief: () => fetcher<{ id?: string; content: string }>('/briefs/weekly'),
   generateWeeklyBrief: () =>
-    fetcher<{ id: string; content: string }>('/briefs/weekly/generate', {
-      method: 'POST',
+    fetcher<{ id: string; content: string; week_start: string; week_end: string; created_at: string }>(
+      '/briefs/weekly/generate',
+      { method: 'POST' }
+    ),
+
+  getContradictions: (include_dismissed = false) =>
+    fetcher<ContradictionAlert[]>(`/contradictions/?include_dismissed=${include_dismissed}`),
+
+  dismissContradiction: (id: string) =>
+    fetcher<{ status: string; id: string; dismissed: boolean }>(`/contradictions/${id}/dismiss`, {
+      method: 'PATCH',
     }),
+
+  getOpenQuestions: (unresolved_only = true) =>
+    fetcher<OpenQuestion[]>(`/questions/?unresolved_only=${unresolved_only}`),
+
+  resolveOpenQuestion: (id: string) =>
+    fetcher<{ status: string; id: string; resolved: boolean }>(`/questions/${id}/resolve`, {
+      method: 'PATCH',
+    }),
+
+  getDriftAlerts: (unresolved_only = true) =>
+    fetcher<DriftAlert[]>(`/drift-alerts/?unresolved_only=${unresolved_only}`),
+
+  resolveDriftAlert: (id: string) =>
+    fetcher<{ status: string; id: string; resolved: boolean }>(`/drift-alerts/${id}/resolve`, {
+      method: 'PATCH',
+    }),
+
+  getTopics: () => fetcher<TopicDetail[]>('/topics/'),
+
+  generateProgressSummary: (start_date?: string, end_date?: string) =>
+    fetcher<{ summary: string; meetings_analyzed: number; decisions_count: number; tasks_count: number }>(
+      '/progress/',
+      {
+        method: 'POST',
+        body: JSON.stringify({ start_date, end_date }),
+      }
+    ),
 };

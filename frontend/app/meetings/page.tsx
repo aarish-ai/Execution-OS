@@ -1,194 +1,208 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { api, MeetingSummary } from '@/lib/api';
-import { Plus, Video, Trash2, ExternalLink } from 'lucide-react';
+import { FileText, Plus, Trash2, Calendar, AlertTriangle } from 'lucide-react';
 
 export default function MeetingsPage() {
-  const router = useRouter();
   const [meetings, setMeetings] = useState<MeetingSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // New Meeting Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [title, setTitle] = useState('');
-  const [transcript, setTranscript] = useState('');
+  const [rawTranscript, setRawTranscript] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     loadMeetings();
   }, []);
 
-  async function loadMeetings() {
+  const loadMeetings = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const data = await api.getMeetings();
       setMeetings(data);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setError('Failed to fetch meetings. Please try again.');
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleCreateMeeting = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !transcript) return;
-    setSubmitting(true);
+    if (!title || !rawTranscript) return;
+
     try {
-      const res = await api.createMeeting(title, transcript);
+      setSubmitting(true);
+      await api.createMeeting(title, rawTranscript);
       setIsModalOpen(false);
       setTitle('');
-      setTranscript('');
-      router.push(`/meetings/${res.id}`);
-    } catch (err) {
-      console.error(err);
+      setRawTranscript('');
+      loadMeetings();
+    } catch (err: any) {
+      setError('Failed to ingest meeting transcript.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const handleDeleteMeeting = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
     e.stopPropagation();
     if (!confirm('Are you sure you want to delete this meeting?')) return;
+
     try {
       await api.deleteMeeting(id);
       loadMeetings();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setError('Failed to delete meeting.');
     }
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-8">
+      {/* Top Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">Meeting Intelligence</h1>
-          <p className="text-slate-400 text-sm mt-1">Paste raw transcripts to extract structured action items</p>
+          <h1 className="text-2xl font-bold text-slate-100">Meeting Intelligence</h1>
+          <p className="text-slate-400 text-sm">
+            Ingest meeting transcripts and view automated decision extractions.
+          </p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl transition-all shadow-lg shadow-blue-500/25 flex items-center gap-2"
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-colors shadow-lg shadow-blue-500/20"
         >
           <Plus className="w-4 h-4" />
-          New Meeting
+          Ingest New Meeting
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {meetings.map((m) => {
-          const score = m.health_score ?? 0.5;
-          let badgeColor = 'bg-amber-500/20 text-amber-400 border-amber-500/40';
-          if (score >= 0.7) badgeColor = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
-          if (score < 0.4) badgeColor = 'bg-red-500/20 text-red-400 border-red-500/40';
+      {error && (
+        <div className="rounded-xl border border-red-500/30 bg-red-950/20 p-4 text-red-400 text-sm flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="hover:underline">
+            Dismiss
+          </button>
+        </div>
+      )}
 
-          return (
-            <div
+      {/* Meetings List */}
+      {loading ? (
+        <div className="h-64 flex items-center justify-center text-slate-500 text-sm">
+          Loading meetings...
+        </div>
+      ) : meetings.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {meetings.map((m) => (
+            <Link
               key={m.id}
-              onClick={() => router.push(`/meetings/${m.id}`)}
-              className="glass-card rounded-2xl p-6 hover:border-blue-500/50 transition-all cursor-pointer flex flex-col justify-between group"
+              href={`/meetings/${m.id}`}
+              className="group relative rounded-2xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-md hover:border-slate-700 transition-all duration-200 hover:shadow-xl hover:shadow-blue-500/5 block"
             >
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2 text-slate-400 text-xs">
-                    <Video className="w-4 h-4 text-blue-400" />
-                    <span>{new Date(m.meeting_date).toLocaleDateString()}</span>
-                  </div>
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${badgeColor}`}>
-                    {(score * 100).toFixed(0)}% Health
-                  </span>
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20 transition-colors">
+                  <FileText className="w-5 h-5" />
                 </div>
-                <h3 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors line-clamp-1">
-                  {m.title}
-                </h3>
-                <p className="text-xs text-slate-400 mt-2 line-clamp-3 leading-relaxed">
-                  {m.summary || 'Summary processing...'}
-                </p>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between">
-                <span className="text-xs font-semibold text-blue-400 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                  Enter Room <ExternalLink className="w-3 h-3" />
-                </span>
                 <button
-                  onClick={(e) => handleDelete(m.id, e)}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-slate-800 transition-all"
-                  title="Delete Meeting"
+                  onClick={(e) => handleDeleteMeeting(e, m.id)}
+                  className="p-2 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                  title="Delete meeting"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
-            </div>
-          );
-        })}
 
-        {meetings.length === 0 && (
-          <div className="col-span-full glass-panel rounded-2xl p-12 text-center border-dashed border-2 border-slate-800">
-            <Video className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-white">No Meetings Ingested</h3>
-            <p className="text-sm text-slate-400 mt-1 max-w-md mx-auto">
-              Paste your first raw meeting transcript to automatically extract decisions, tasks, and contradiction alerts.
+              <h3 className="font-semibold text-slate-100 group-hover:text-blue-400 transition-colors mb-2 line-clamp-1">
+                {m.title}
+              </h3>
+
+              <p className="text-slate-400 text-xs line-clamp-2 mb-4">
+                {m.summary || 'Processing transcript...'}
+              </p>
+
+              <div className="flex items-center justify-between pt-4 border-t border-slate-800/60 text-xs text-slate-500">
+                <span className="flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5" />
+                  {new Date(m.created_at || m.meeting_date).toLocaleDateString()}
+                </span>
+
+                {m.contradictions_count > 0 && (
+                  <span className="flex items-center gap-1 text-amber-400 font-medium">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    {m.contradictions_count} Flag
+                  </span>
+                )}
+              </div>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <div className="p-12 text-center border border-dashed border-slate-800 rounded-2xl space-y-4">
+          <FileText className="w-8 h-8 text-slate-600 mx-auto" />
+          <div>
+            <h3 className="text-slate-300 font-medium">No meetings ingested yet</h3>
+            <p className="text-slate-500 text-xs mt-1">
+              Click "Ingest New Meeting" to analyze a transcript.
             </p>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg shadow-lg shadow-blue-500/20"
-            >
-              Paste Transcript Now
-            </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Modal for Transcript Paste */}
+      {/* Ingest Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="glass-panel w-full max-w-2xl rounded-2xl p-6 border border-slate-800 shadow-2xl relative">
-            <h2 className="text-xl font-bold text-white mb-1">New Meeting Transcript</h2>
-            <p className="text-xs text-slate-400 mb-6">
-              Paste plain text or speaker-labeled lines (e.g. "Ahmed: ...").
-            </p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-xl rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-6 shadow-2xl">
+            <h2 className="text-xl font-bold text-slate-100">Ingest Meeting Transcript</h2>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleCreateMeeting} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1.5">
+                <label className="block text-xs font-medium text-slate-400 mb-1">
                   Meeting Title
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Sprint Architecture & API Review"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-blue-500"
+                  placeholder="e.g. Sprint Architecture Sync"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase mb-1.5">
-                  Raw Transcript Text
+                <label className="block text-xs font-medium text-slate-400 mb-1">
+                  Raw Transcript
                 </label>
                 <textarea
                   required
-                  rows={10}
-                  placeholder={`Ahmed: Let's discuss DB architecture...
-Sarah: Postgres with pgvector is optimal.
-Omar: I will set up the schema by Thursday.`}
-                  value={transcript}
-                  onChange={(e) => setTranscript(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500 font-mono leading-relaxed"
+                  rows={8}
+                  value={rawTranscript}
+                  onChange={(e) => setRawTranscript(e.target.value)}
+                  placeholder="Paste conversation transcript here..."
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-blue-500 resize-none"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
+              <div className="flex items-center justify-end gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white"
+                  className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-blue-500/25 flex items-center gap-2"
+                  className="px-4 py-2 text-sm font-medium rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white transition-colors"
                 >
-                  {submitting ? 'Processing Pipeline...' : 'Process Transcript →'}
+                  {submitting ? 'Processing...' : 'Run Pipeline'}
                 </button>
               </div>
             </form>

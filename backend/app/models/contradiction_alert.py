@@ -1,6 +1,5 @@
 import uuid
-from datetime import datetime
-from sqlalchemy import Text, Boolean, DateTime, ForeignKey, Column
+from sqlalchemy import Text, Boolean, DateTime, ForeignKey, Column, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -16,7 +15,7 @@ class ContradictionAlert(Base):
     conflicting_quote = Column(Text, nullable=False)
     explanation = Column(Text, nullable=False)
     dismissed = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     meeting = relationship("Meeting", back_populates="contradictions")
     prior_decision = relationship("Decision", back_populates="contradictions")

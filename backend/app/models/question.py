@@ -1,6 +1,5 @@
 import uuid
-from datetime import datetime
-from sqlalchemy import String, Text, Boolean, DateTime, ForeignKey, Column
+from sqlalchemy import String, Text, Boolean, Integer, DateTime, ForeignKey, Column, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -16,7 +15,8 @@ class OpenQuestion(Base):
     raised_by = Column(String(255), nullable=True)
     resolved = Column(Boolean, default=False, nullable=False)
     carried_forward_from = Column(UUID(as_uuid=True), ForeignKey("open_questions.id", ondelete="SET NULL"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    transcript_position = Column(Integer, nullable=True, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     meeting = relationship("Meeting", back_populates="open_questions")
     parent_question = relationship("OpenQuestion", remote_side=[id])

@@ -34,7 +34,8 @@ async def test_hybrid_search(async_session):
         embedder=embedder,
     )
     assert len(results) >= 1
-    assert "pgvector" in results[0].content
+    content_str = results[0]["content"] if isinstance(results[0], dict) else results[0].content
+    assert "pgvector" in content_str
 
 
 @pytest.mark.asyncio

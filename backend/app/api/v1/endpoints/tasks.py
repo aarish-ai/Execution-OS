@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.core.database import get_db
+from app.core.utils import sanitize_like_pattern
 from app.models.task import Task, TaskStatus
 from app.schemas import TaskSchema, TaskUpdate
 
@@ -20,7 +21,8 @@ async def list_tasks(
 ):
     stmt = select(Task)
     if owner:
-        stmt = stmt.where(Task.owner.ilike(f"%{owner}%"))
+        safe_owner = sanitize_like_pattern(owner)
+        stmt = stmt.where(Task.owner.ilike(f"%{safe_owner}%"))
     if status:
         stmt = stmt.where(Task.status == status)
     res = await db.execute(stmt.order_by(Task.created_at.desc()))

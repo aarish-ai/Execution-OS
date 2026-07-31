@@ -1,61 +1,156 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api, Decision } from '@/lib/api';
-import { GitCommit, User } from 'lucide-react';
+import { CheckCircle2, User, Calendar, Filter } from 'lucide-react';
 
-export default function DecisionsPage() {
+export default function DecisionTimelinePage() {
   const [decisions, setDecisions] = useState<Decision[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Filters
+  const [ownerFilter, setOwnerFilter] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
-    api.getDecisions().then(setDecisions).catch(console.error);
-  }, []);
+    loadDecisions();
+  }, [ownerFilter]);
+
+  const loadDecisions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await api.getDecisions(ownerFilter || undefined);
+      setDecisions(data);
+    } catch (err: any) {
+      setError('Failed to fetch decisions.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredDecisions = decisions.filter((d) => {
+    if (!d.created_at) return true;
+    const dDate = new Date(d.created_at).toISOString().split('T')[0];
+    if (startDate && dDate < startDate) return false;
+    if (endDate && dDate > endDate) return false;
+    return true;
+  });
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
-          <GitCommit className="w-8 h-8 text-blue-400" />
-          Decision Timeline
-        </h1>
-        <p className="text-slate-400 text-sm mt-1">Chronological record of all team commitments and architectural choices</p>
+        <h1 className="text-2xl font-bold text-slate-100">Decision Timeline</h1>
+        <p className="text-slate-400 text-sm">
+          Traceable commitments and architectural choices made across all meetings.
+        </p>
       </div>
 
-      <div className="relative border-l-2 border-slate-800 ml-4 pl-6 space-y-6">
-        {decisions.map((d) => (
-          <div key={d.id} className="relative group">
-            <div className="absolute -left-[31px] top-1.5 w-3 h-3 rounded-full bg-blue-500 ring-4 ring-slate-950 group-hover:scale-125 transition-transform" />
+      {error && (
+        <div className="rounded-xl border border-red-500/30 bg-red-950/20 p-4 text-red-400 text-sm flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="hover:underline">
+            Dismiss
+          </button>
+        </div>
+      )}
 
-            <div className="glass-panel rounded-2xl p-5 border border-slate-800 hover:border-blue-500/40 transition-all">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <h3 className="text-sm font-bold text-white leading-snug">{d.content}</h3>
-                {d.owner && (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center gap-1">
-                    <User className="w-3 h-3" />
-                    {d.owner}
-                  </span>
-                )}
-              </div>
+      {/* Filter Bar */}
+      <div className="flex flex-wrap items-center gap-4 p-4 rounded-2xl border border-slate-800 bg-slate-900/60 backdrop-blur-md">
+        <div className="flex items-center gap-2 text-slate-400 text-sm">
+          <Filter className="w-4 h-4" />
+          <span>Filters:</span>
+        </div>
 
-              {d.rationale && (
-                <p className="text-xs text-slate-400 mt-1 italic">
-                  Rationale: {d.rationale}
-                </p>
-              )}
+        <input
+          type="text"
+          placeholder="Filter by owner..."
+          value={ownerFilter}
+          onChange={(e) => setOwnerFilter(e.target.value)}
+          className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-blue-500"
+        />
 
-              <div className="mt-3 pt-3 border-t border-slate-800/80 text-[11px] text-slate-500 font-mono">
-                Verbatim Quote: "{d.source_quote}"
-              </div>
-            </div>
-          </div>
-        ))}
+        <div className="flex items-center gap-2">
+          <span className="text-slate-400 text-xs">From:</span>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-blue-500"
+          />
+        </div>
 
-        {decisions.length === 0 && (
-          <div className="text-center py-12 text-slate-400 text-xs italic">
-            No decisions logged yet.
-          </div>
+        <div className="flex items-center gap-2">
+          <span className="text-slate-400 text-xs">To:</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-blue-500"
+          />
+        </div>
+
+        {(ownerFilter || startDate || endDate) && (
+          <button
+            onClick={() => {
+              setOwnerFilter('');
+              setStartDate('');
+              setEndDate('');
+            }}
+            className="text-xs text-blue-400 hover:underline ml-auto"
+          >
+            Clear Filters
+          </button>
         )}
       </div>
+
+      {/* Timeline List */}
+      {loading ? (
+        <div className="h-64 flex items-center justify-center text-slate-500 text-sm">
+          Loading decisions...
+        </div>
+      ) : filteredDecisions.length > 0 ? (
+        <div className="relative border-l border-slate-800 ml-4 space-y-6 pl-6">
+          {filteredDecisions.map((d) => (
+            <div key={d.id} className="relative group">
+              <div className="absolute -left-[31px] top-1 p-1 rounded-full bg-slate-900 border border-emerald-500/50 text-emerald-400">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+
+              <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/60 backdrop-blur-md space-y-3">
+                <p className="text-slate-100 text-base font-medium">{d.content}</p>
+
+                {d.rationale && (
+                  <p className="text-slate-400 text-xs bg-slate-950/40 p-3 rounded-xl border border-slate-800/60">
+                    <strong className="text-slate-300 font-semibold">Rationale: </strong>
+                    {d.rationale}
+                  </p>
+                )}
+
+                <div className="flex items-center justify-between pt-3 border-t border-slate-800/60 text-xs text-slate-500">
+                  <span className="flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-blue-400" />
+                    Owner: {d.owner || 'Unassigned'}
+                  </span>
+
+                  {d.created_at && (
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      {new Date(d.created_at).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="p-12 text-center border border-dashed border-slate-800 rounded-2xl text-slate-500 text-sm">
+          No decisions match the selected filters.
+        </div>
+      )}
     </div>
   );
 }

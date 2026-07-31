@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     TEST_DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/execution_os_test"
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # Security & Auth
+    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    API_KEY: Optional[str] = None
+
     # LLM Services
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     GROQ_API_KEY: Optional[str] = None

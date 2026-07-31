@@ -1,136 +1,118 @@
 'use client';
 
-import React, { useState } from 'react';
-import { api, AskResponse } from '@/lib/api';
-import { Search, Sparkles, BookOpen, ChevronDown, ChevronUp, Bot, User } from 'lucide-react';
+import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import { api, SearchResult } from '@/lib/api';
+import { Search, Sparkles, FileText, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 
-interface QATurn {
-  question: string;
-  response: AskResponse;
-}
-
-export default function AskAnythingPage() {
-  const [question, setQuestion] = useState('');
-  const [turns, setTurns] = useState<QATurn[]>([]);
+export default function AskPage() {
+  const [query, setQuery] = useState('');
+  const [answer, setAnswer] = useState<string | null>(null);
+  const [sources, setSources] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [expandedSources, setExpandedSources] = useState<{ [key: number]: boolean }>({});
+  const [error, setError] = useState<string | null>(null);
 
   const handleAsk = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!question.trim()) return;
-    setLoading(true);
-    const currentQ = question;
-    setQuestion('');
+    if (!query.trim()) return;
 
     try {
-      const res = await api.ask(currentQ);
-      setTurns((prev) => [{ question: currentQ, response: res }, ...prev]);
-    } catch (err) {
-      console.error(err);
+      setLoading(true);
+      setError(null);
+      const data = await api.ask(query);
+      setAnswer(data.answer);
+      setSources(data.sources);
+    } catch (err: any) {
+      setError('Failed to process Q&A query.');
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleSource = (idx: number) => {
-    setExpandedSources((prev) => ({ ...prev, [idx]: !prev[idx] }));
-  };
-
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
-          <Sparkles className="w-8 h-8 text-blue-400" />
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 via-indigo-200 to-white bg-clip-text text-transparent">
           Ask Anything
         </h1>
-        <p className="text-slate-400 text-sm mt-1">
-          Perplexity for your organization — query all meetings with source citations.
+        <p className="text-slate-400 text-sm">
+          Natural language Q&A across your squad's complete meeting memory.
         </p>
       </div>
 
       {/* Query Bar */}
       <form onSubmit={handleAsk} className="relative">
-        <div className="relative flex items-center">
-          <input
-            type="text"
-            required
-            placeholder='e.g. "Why did we decide on Postgres over Redis?" or "What has Omar committed to?"'
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            className="w-full px-5 py-4 pl-12 bg-slate-900 border border-blue-500/30 rounded-2xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 shadow-xl"
-          />
-          <Search className="w-5 h-5 text-blue-400 absolute left-4" />
-          <button
-            type="submit"
-            disabled={loading}
-            className="absolute right-3 px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-all shadow-lg shadow-blue-500/20"
-          >
-            {loading ? 'Searching Memory...' : 'Ask →'}
-          </button>
-        </div>
+        <input
+          type="text"
+          aria-label="Ask a question across meeting memory"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="e.g. What did we decide about database migrations last week?"
+          className="w-full pl-6 pr-32 py-4 rounded-2xl bg-slate-900 border border-slate-800 text-slate-100 text-base placeholder-slate-500 focus:outline-none focus:border-blue-500 shadow-xl"
+        />
+        <button
+          type="submit"
+          disabled={loading || !query.trim()}
+          className="absolute right-3 top-3 bottom-3 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-medium text-sm flex items-center gap-2 transition-colors shadow-lg shadow-blue-500/20"
+        >
+          <Sparkles className="w-4 h-4" />
+          {loading ? 'Thinking...' : 'Ask'}
+        </button>
       </form>
 
-      {/* Q&A History */}
-      <div className="space-y-6">
-        {turns.map((turn, tIdx) => (
-          <div key={tIdx} className="glass-panel rounded-2xl p-6 border border-slate-800 space-y-4">
-            {/* User Question */}
-            <div className="flex items-start gap-3 border-b border-slate-800/80 pb-3">
-              <div className="w-7 h-7 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold text-xs shrink-0">
-                <User className="w-4 h-4" />
-              </div>
-              <h3 className="text-base font-bold text-white mt-0.5">{turn.question}</h3>
+      {error && (
+        <div className="rounded-xl border border-red-500/30 bg-red-950/20 p-4 text-red-400 text-sm flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="hover:underline">
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Answer & Sources */}
+      {answer && (
+        <div className="space-y-6">
+          <div className="p-6 rounded-2xl border border-blue-500/20 bg-slate-900/60 backdrop-blur-md space-y-4">
+            <h2 className="text-sm font-semibold text-blue-400 flex items-center gap-2">
+              <Sparkles className="w-4 h-4" />
+              Synthesized Answer
+            </h2>
+            <div className="prose prose-invert max-w-none text-slate-200 text-sm leading-relaxed">
+              <ReactMarkdown>{answer}</ReactMarkdown>
             </div>
+          </div>
 
-            {/* Answer */}
-            <div className="flex items-start gap-3">
-              <div className="w-7 h-7 rounded-lg bg-purple-600/20 text-purple-400 flex items-center justify-center font-bold text-xs shrink-0 mt-1">
-                <Bot className="w-4 h-4" />
-              </div>
-              <div className="flex-1 text-xs text-slate-300 leading-relaxed font-sans whitespace-pre-wrap">
-                {turn.response.answer}
+          {/* Sources */}
+          {sources.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                Source Transcripts ({sources.length}):
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {sources.map((src, idx) => (
+                  <Link
+                    key={idx}
+                    href={`/meetings/${src.meeting_id}`}
+                    className="p-4 rounded-xl border border-slate-800 bg-slate-900/40 hover:border-slate-700 transition-colors space-y-2 group block"
+                  >
+                    <div className="flex items-center justify-between text-xs text-blue-400">
+                      <span className="flex items-center gap-1 font-medium">
+                        <FileText className="w-3.5 h-3.5" />
+                        {src.meeting_title}
+                      </span>
+                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                    <p className="text-slate-300 text-xs line-clamp-3 italic bg-slate-950/40 p-2.5 rounded-lg border border-slate-800/40">
+                      "{src.content}"
+                    </p>
+                  </Link>
+                ))}
               </div>
             </div>
-
-            {/* Sources Accordion */}
-            {turn.response.sources.length > 0 && (
-              <div className="pt-3 border-t border-slate-800/80">
-                <button
-                  onClick={() => toggleSource(tIdx)}
-                  className="text-xs font-semibold text-slate-400 hover:text-blue-400 flex items-center gap-2"
-                >
-                  <BookOpen className="w-3.5 h-3.5" />
-                  Sources & Citations ({turn.response.sources.length})
-                  {expandedSources[tIdx] ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                </button>
-
-                {expandedSources[tIdx] && (
-                  <div className="mt-3 space-y-2 pl-4 border-l-2 border-slate-800">
-                    {turn.response.sources.map((src, sIdx) => (
-                      <div key={sIdx} className="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-[11px]">
-                        <div className="font-semibold text-blue-400">
-                          {src.meeting_title} — Speaker: {src.speaker || 'Unknown'} (Chunk #{src.chunk_index})
-                        </div>
-                        <p className="text-slate-400 mt-1 font-mono italic text-[10px]">
-                          "{src.content}"
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
-
-        {turns.length === 0 && !loading && (
-          <div className="text-center py-12 glass-panel rounded-2xl border-dashed border-2 border-slate-800">
-            <Sparkles className="w-10 h-10 text-slate-600 mx-auto mb-2" />
-            <p className="text-sm font-semibold text-slate-300">Ask any question across your team's meeting history.</p>
-            <p className="text-xs text-slate-500 mt-1">Get verified answers backed by source citations.</p>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

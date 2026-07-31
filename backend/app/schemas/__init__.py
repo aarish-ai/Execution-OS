@@ -21,11 +21,14 @@ class TranscriptChunkSchema(BaseModel):
 
 class DecisionSchema(BaseModel):
     id: str
+    meeting_id: str
+    topic_id: Optional[str]
     content: str
     owner: Optional[str]
     rationale: Optional[str]
     source_quote: str
     transcript_position: int
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -33,6 +36,7 @@ class DecisionSchema(BaseModel):
 
 class TaskSchema(BaseModel):
     id: str
+    meeting_id: str
     owner: str
     description: str
     deadline: Optional[date]
@@ -45,8 +49,10 @@ class TaskSchema(BaseModel):
 
 
 class TaskUpdate(BaseModel):
-    status: Optional[TaskStatus] = None
+    owner: Optional[str] = None
+    description: Optional[str] = None
     deadline: Optional[date] = None
+    status: Optional[TaskStatus] = None
 
 
 class OpenQuestionSchema(BaseModel):
@@ -55,6 +61,7 @@ class OpenQuestionSchema(BaseModel):
     raised_by: Optional[str]
     resolved: bool
     carried_forward_from: Optional[str]
+    transcript_position: int = 0
 
     class Config:
         from_attributes = True
@@ -62,6 +69,7 @@ class OpenQuestionSchema(BaseModel):
 
 class ContradictionAlertSchema(BaseModel):
     id: str
+    meeting_id: str
     prior_decision_id: str
     conflicting_quote: str
     explanation: str
@@ -78,11 +86,13 @@ class MeetingDetailSchema(BaseModel):
     summary: Optional[str]
     health_score: Optional[float]
     meeting_date: datetime
-    chunks: List[TranscriptChunkSchema] = []
-    decisions: List[DecisionSchema] = []
-    tasks: List[TaskSchema] = []
-    open_questions: List[OpenQuestionSchema] = []
-    contradictions: List[ContradictionAlertSchema] = []
+    created_at: datetime
+    updated_at: datetime
+    chunks: List[TranscriptChunkSchema]
+    decisions: List[DecisionSchema]
+    tasks: List[TaskSchema]
+    open_questions: List[OpenQuestionSchema]
+    contradictions: List[ContradictionAlertSchema]
 
     class Config:
         from_attributes = True
@@ -94,6 +104,8 @@ class MeetingSummarySchema(BaseModel):
     summary: Optional[str]
     health_score: Optional[float]
     meeting_date: datetime
+    created_at: datetime
+    contradictions_count: int = 0
 
     class Config:
         from_attributes = True

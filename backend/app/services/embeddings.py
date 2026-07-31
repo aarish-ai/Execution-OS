@@ -1,19 +1,20 @@
+import hashlib
 from typing import List, Optional
 from langchain_core.embeddings import Embeddings
-from langchain_community.embeddings import FakeEmbeddings
 
 from app.core.config import settings
 
 
 class DeterministicEmbeddings(Embeddings):
-    """Fallback embedding generator for testing environments without GPU/Ollama."""
+    """Hash-based deterministic embedding generator for testing and offline fallbacks."""
 
     def __init__(self, dimension: int = 768):
         self.dimension = dimension
 
     def _embed(self, text: str) -> List[float]:
-        val = sum(ord(c) for c in text) % 100 / 100.0
-        return [val] * self.dimension
+        h = hashlib.sha256(text.encode()).digest()
+        extended = h * ((self.dimension // 32) + 1)
+        return [(b / 255.0) for b in extended][:self.dimension]
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         return [self._embed(t) for t in texts]
@@ -42,5 +43,4 @@ def get_embedder(provider: Optional[str] = None) -> Embeddings:
         else:
             return DeterministicEmbeddings(dimension=settings.EMBEDDING_DIMENSION)
     except Exception:
-        # Fallback if Ollama or HuggingFace model download fails offline
         return DeterministicEmbeddings(dimension=settings.EMBEDDING_DIMENSION)

@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.core.database import get_db
+from app.core.utils import sanitize_like_pattern
 from app.models.decision import Decision
 from app.schemas import DecisionSchema
 
@@ -18,7 +19,8 @@ async def list_decisions(
 ):
     stmt = select(Decision)
     if owner:
-        stmt = stmt.where(Decision.owner.ilike(f"%{owner}%"))
+        safe_owner = sanitize_like_pattern(owner)
+        stmt = stmt.where(Decision.owner.ilike(f"%{safe_owner}%"))
     res = await db.execute(stmt.order_by(Decision.created_at.desc()))
     return res.scalars().all()
 

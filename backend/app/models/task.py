@@ -1,7 +1,6 @@
 import enum
 import uuid
-from datetime import datetime
-from sqlalchemy import String, Text, Date, Integer, DateTime, ForeignKey, Enum as SQLEnum, Column
+from sqlalchemy import String, Text, Date, Integer, DateTime, ForeignKey, Enum as SQLEnum, Column, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -26,7 +25,7 @@ class Task(Base):
     status = Column(SQLEnum(TaskStatus), default=TaskStatus.OPEN, nullable=False, index=True)
     source_quote = Column(Text, nullable=False)
     transcript_position = Column(Integer, nullable=False, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     meeting = relationship("Meeting", back_populates="tasks")

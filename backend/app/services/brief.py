@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from sqlalchemy import select
 from langchain_core.messages import HumanMessage
 
@@ -14,7 +14,8 @@ async def generate_weekly_brief_service(session=None) -> str:
         should_close = True
 
     try:
-        cutoff = datetime.utcnow() - timedelta(days=7)
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(days=7)
 
         d_res = await session.execute(select(Decision).where(Decision.created_at >= cutoff))
         recent_decisions = d_res.scalars().all()
@@ -29,7 +30,7 @@ async def generate_weekly_brief_service(session=None) -> str:
         recent_contradictions = c_res.scalars().all()
 
         decisions_str = "\n".join(f"- {d.content} (Owner: {d.owner or 'Team'})" for d in recent_decisions) or "None"
-        tasks_str = "\n".join(f"- {t.owner}: {t.description} [Status: {t.status.value}]" for t in open_tasks) or "None"
+        tasks_str = "\n".join(f"- {t.owner}: {t.description} [Status: {t.status.value}] font-medium" for t in open_tasks) or "None"
         questions_str = "\n".join(f"- {q.content}" for q in open_questions) or "None"
         contradictions_str = "\n".join(f"- {c.explanation}" for c in recent_contradictions) or "None"
 
@@ -49,7 +50,7 @@ Data:
 {contradictions_str}
 
 Format output as:
-# Weekly Execution Brief — {datetime.utcnow().strftime('%B %d, %Y')}
+# Weekly Execution Brief — {now.strftime('%B %d, %Y')}
 ## What Got Decided
 ## Who Owns What
 ## Still Unresolved

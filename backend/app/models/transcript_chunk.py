@@ -1,6 +1,5 @@
 import uuid
-from datetime import datetime
-from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, Column
+from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, Column, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
@@ -18,6 +17,6 @@ class TranscriptChunk(Base):
     content = Column(Text, nullable=False)
     chunk_index = Column(Integer, nullable=False)
     embedding = Column(Vector(settings.EMBEDDING_DIMENSION), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     meeting = relationship("Meeting", back_populates="chunks")

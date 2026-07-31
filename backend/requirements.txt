@@ -2,6 +2,7 @@ fastapi>=0.110.0
 uvicorn>=0.28.0
 sqlalchemy[asyncio]>=2.0.28
 asyncpg>=0.29.0
+aiosqlite>=0.20.0
 alembic>=1.13.1
 pydantic-settings>=2.2.1
 pgvector>=0.2.5

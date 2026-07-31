@@ -1,10 +1,11 @@
 import uuid
-from datetime import datetime
-from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, Column
+from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, Column, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+from pgvector.sqlalchemy import Vector
 
 from app.core.database import Base
+from app.core.config import settings
 
 
 class Decision(Base):
@@ -18,7 +19,8 @@ class Decision(Base):
     rationale = Column(Text, nullable=True)
     source_quote = Column(Text, nullable=False)
     transcript_position = Column(Integer, nullable=False, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    embedding = Column(Vector(settings.EMBEDDING_DIMENSION), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     meeting = relationship("Meeting", back_populates="decisions")
     topic = relationship("Topic", back_populates="decisions")

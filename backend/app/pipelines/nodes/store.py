@@ -1,9 +1,10 @@
 import uuid
-from datetime import datetime, date
+from datetime import date
 from sqlalchemy import select
 
 from app.pipelines.state import MeetingState
 from app.services.embeddings import get_embedder
+from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.models import (
     Meeting,
@@ -57,7 +58,7 @@ async def store_node(state: MeetingState, session=None, embedder=None) -> dict:
             embeddings = embedder.embed_documents(contents) if contents else []
 
             for i, c in enumerate(chunks):
-                emb = embeddings[i] if i < len(embeddings) else [0.0] * 768
+                emb = embeddings[i] if i < len(embeddings) else [0.0] * settings.EMBEDDING_DIMENSION
                 t_chunk = TranscriptChunk(
                     meeting_id=meeting.id,
                     speaker=c.get("speaker"),
@@ -80,9 +81,10 @@ async def store_node(state: MeetingState, session=None, embedder=None) -> dict:
                 await session.flush()
                 topic_obj_map[top_name] = top_obj.id
 
-            # Store decisions
+            # Store decisions with embeddings
             for d in extraction.get("decisions", []):
                 top_id = topic_obj_map.get(d.get("topic"))
+                d_emb = embedder.embed_query(d["content"])
                 dec_obj = Decision(
                     meeting_id=meeting.id,
                     topic_id=top_id,
@@ -91,6 +93,7 @@ async def store_node(state: MeetingState, session=None, embedder=None) -> dict:
                     rationale=d.get("rationale"),
                     source_quote=d.get("source_quote", d["content"]),
                     transcript_position=d.get("chunk_index", 0),
+                    embedding=d_emb,
                 )
                 session.add(dec_obj)
 
@@ -118,12 +121,13 @@ async def store_node(state: MeetingState, session=None, embedder=None) -> dict:
                 )
                 session.add(task_obj)
 
-            # Store open questions
+            # Store open questions with transcript_position
             for q in extraction.get("open_questions", []):
                 q_obj = OpenQuestion(
                     meeting_id=meeting.id,
                     content=q["content"],
                     raised_by=q.get("raised_by"),
+                    transcript_position=q.get("chunk_index", 0),
                 )
                 session.add(q_obj)
 
