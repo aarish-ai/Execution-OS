@@ -13,7 +13,17 @@ async def test_health_endpoint():
 
 @pytest.mark.asyncio
 async def test_list_meetings_empty(async_session):
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        response = await ac.get("/api/v1/meetings/")
-    assert response.status_code == 200
-    assert isinstance(response.json(), list)
+    from app.core.database import get_db
+
+    async def override_get_db():
+        yield async_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            response = await ac.get("/api/v1/meetings/")
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+    finally:
+        app.dependency_overrides.clear()
+
