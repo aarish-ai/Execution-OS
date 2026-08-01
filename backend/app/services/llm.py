@@ -33,7 +33,7 @@ def get_llm(
 
         return ChatGroq(
             api_key=settings.GROQ_API_KEY,
-            model_name=selected_model or "llama3-8b-8192",
+            model_name=selected_model or "llama-3.1-8b-instant",
             temperature=0.1,
         )
     elif selected_provider == "gemini":

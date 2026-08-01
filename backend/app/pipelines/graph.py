@@ -42,14 +42,34 @@ def build_graph(llm=None, session=None, embedder=None):
     workflow.add_node("ingest", ingest_node)
     workflow.add_node("parse", parse_node)
     
-    from functools import partial
-    workflow.add_node("extract", partial(extract_node, llm=llm))
-    workflow.add_node("link", partial(link_node, session=session))
-    workflow.add_node("contradiction", partial(contradiction_node, llm=llm, session=session, embedder=embedder))
-    workflow.add_node("summarize", partial(summarize_node, llm=llm))
-    workflow.add_node("brief", partial(brief_node, llm=llm, session=session))
-    workflow.add_node("task_sync", partial(task_sync_node, session=session))
-    workflow.add_node("store", partial(store_node, session=session, embedder=embedder))
+    async def wrapped_extract(state: MeetingState):
+        return await extract_node(state, llm=llm)
+
+    async def wrapped_link(state: MeetingState):
+        return await link_node(state, session=session)
+
+    async def wrapped_contradiction(state: MeetingState):
+        return await contradiction_node(state, llm=llm, session=session, embedder=embedder)
+
+    async def wrapped_summarize(state: MeetingState):
+        return await summarize_node(state, llm=llm)
+
+    async def wrapped_brief(state: MeetingState):
+        return await brief_node(state, llm=llm, session=session)
+
+    async def wrapped_task_sync(state: MeetingState):
+        return await task_sync_node(state, session=session)
+
+    async def wrapped_store(state: MeetingState):
+        return await store_node(state, session=session, embedder=embedder)
+
+    workflow.add_node("extract", wrapped_extract)
+    workflow.add_node("link", wrapped_link)
+    workflow.add_node("contradiction", wrapped_contradiction)
+    workflow.add_node("summarize", wrapped_summarize)
+    workflow.add_node("brief", wrapped_brief)
+    workflow.add_node("task_sync", wrapped_task_sync)
+    workflow.add_node("store", wrapped_store)
     workflow.add_node("error_handler", error_handler_node)
 
     workflow.set_entry_point("ingest")

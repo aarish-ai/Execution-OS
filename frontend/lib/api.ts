@@ -108,6 +108,7 @@ async function fetcher<T>(endpoint: string, options?: RequestInit): Promise<T> {
   }
 
   const res = await fetch(`${BASE_URL}${endpoint}`, {
+    cache: 'no-store',
     ...options,
     headers,
   });
@@ -115,6 +116,10 @@ async function fetcher<T>(endpoint: string, options?: RequestInit): Promise<T> {
   if (!res.ok) {
     const errorBody = await res.text().catch(() => '');
     throw new Error(`API error (${res.status}): ${errorBody || res.statusText}`);
+  }
+
+  if (res.status === 204) {
+    return {} as T;
   }
 
   return res.json();

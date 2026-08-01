@@ -14,9 +14,9 @@ class Meeting(Base):
     raw_transcript = Column(Text, nullable=False)
     summary = Column(Text, nullable=True)
     health_score = Column(Float, nullable=True)
-    meeting_date = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    meeting_date = Column(DateTime(timezone=True), server_default=func.now(), default=func.now(), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), default=func.now(), onupdate=func.now(), nullable=False)
 
     topics = relationship("Topic", back_populates="meeting", cascade="all, delete-orphan")
     decisions = relationship("Decision", back_populates="meeting", cascade="all, delete-orphan")
