@@ -13,7 +13,7 @@ from app.schemas import TaskSchema, TaskUpdate
 router = APIRouter()
 
 
-@router.get("/", response_model=List[TaskSchema])
+@router.get("", response_model=List[TaskSchema])
 async def list_tasks(
     owner: Optional[str] = None,
     status: Optional[TaskStatus] = None,

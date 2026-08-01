@@ -12,7 +12,7 @@ from app.schemas import DecisionSchema
 router = APIRouter()
 
 
-@router.get("/", response_model=List[DecisionSchema])
+@router.get("", response_model=List[DecisionSchema])
 async def list_decisions(
     owner: Optional[str] = None,
     db: AsyncSession = Depends(get_db),

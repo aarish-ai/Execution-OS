@@ -11,7 +11,7 @@ from app.services.llm import get_llm
 router = APIRouter()
 
 
-@router.post("/", response_model=List[SearchResult])
+@router.post("", response_model=List[SearchResult])
 async def search_transcript(
     payload: SearchQuery,
     db: AsyncSession = Depends(get_db),

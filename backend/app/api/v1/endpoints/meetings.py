@@ -23,7 +23,7 @@ async def _run_pipeline_background(raw_transcript: str, meeting_id: str, title: 
         )
 
 
-@router.post("/", response_model=MeetingSummarySchema, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=MeetingSummarySchema, status_code=status.HTTP_201_CREATED)
 async def create_meeting(
     payload: MeetingCreate,
     background_tasks: BackgroundTasks,
@@ -52,7 +52,7 @@ async def create_meeting(
     )
 
 
-@router.get("/", response_model=List[MeetingSummarySchema])
+@router.get("", response_model=List[MeetingSummarySchema])
 async def list_meetings(db: AsyncSession = Depends(get_db)):
     res = await db.execute(
         select(Meeting)

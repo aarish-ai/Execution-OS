@@ -23,7 +23,7 @@ class TopicDetailResponse(BaseModel):
     created_at: datetime
 
 
-@router.get("/", response_model=List[TopicDetailResponse])
+@router.get("", response_model=List[TopicDetailResponse])
 async def list_topics(db: AsyncSession = Depends(get_db)):
     res = await db.execute(
         select(Topic).options(

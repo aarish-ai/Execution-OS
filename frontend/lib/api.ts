@@ -122,12 +122,12 @@ async function fetcher<T>(endpoint: string, options?: RequestInit): Promise<T> {
 
 export const api = {
   createMeeting: (title: string, raw_transcript: string) =>
-    fetcher<MeetingSummary>('/meetings/', {
+    fetcher<MeetingSummary>('/meetings', {
       method: 'POST',
       body: JSON.stringify({ title, raw_transcript }),
     }),
 
-  getMeetings: () => fetcher<MeetingSummary[]>('/meetings/'),
+  getMeetings: () => fetcher<MeetingSummary[]>('/meetings'),
 
   getMeeting: (id: string) => fetcher<MeetingDetail>(`/meetings/${id}`),
 
@@ -209,7 +209,7 @@ export const api = {
       method: 'PATCH',
     }),
 
-  getTopics: () => fetcher<TopicDetail[]>('/topics/'),
+  getTopics: () => fetcher<TopicDetail[]>('/topics'),
 
   generateProgressSummary: (start_date?: string, end_date?: string) =>
     fetcher<{ summary: string; meetings_analyzed: number; decisions_count: number; tasks_count: number }>(

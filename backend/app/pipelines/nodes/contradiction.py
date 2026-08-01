@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 import json
 import re
 from typing import List, Dict, Any
@@ -66,6 +69,7 @@ async def contradiction_node(state: MeetingState, llm=None, session=None, embedd
                 await session.close()
 
     except Exception as e:
+        logger.error(f"Pipeline error in contradiction.py: {e}", exc_info=True)
         errors.append(f"Contradiction node error: {str(e)}")
 
     return {

@@ -1,3 +1,4 @@
+from uuid import UUID
 from datetime import datetime, date
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
@@ -10,7 +11,7 @@ class MeetingCreate(BaseModel):
 
 
 class TranscriptChunkSchema(BaseModel):
-    id: str
+    id: UUID
     speaker: Optional[str]
     content: str
     chunk_index: int
@@ -20,8 +21,8 @@ class TranscriptChunkSchema(BaseModel):
 
 
 class DecisionSchema(BaseModel):
-    id: str
-    meeting_id: str
+    id: UUID
+    meeting_id: UUID
     topic_id: Optional[str]
     content: str
     owner: Optional[str]
@@ -35,8 +36,8 @@ class DecisionSchema(BaseModel):
 
 
 class TaskSchema(BaseModel):
-    id: str
-    meeting_id: str
+    id: UUID
+    meeting_id: UUID
     owner: str
     description: str
     deadline: Optional[date]
@@ -56,7 +57,7 @@ class TaskUpdate(BaseModel):
 
 
 class OpenQuestionSchema(BaseModel):
-    id: str
+    id: UUID
     content: str
     raised_by: Optional[str]
     resolved: bool
@@ -68,9 +69,9 @@ class OpenQuestionSchema(BaseModel):
 
 
 class ContradictionAlertSchema(BaseModel):
-    id: str
-    meeting_id: str
-    prior_decision_id: str
+    id: UUID
+    meeting_id: UUID
+    prior_decision_id: UUID
     conflicting_quote: str
     explanation: str
     dismissed: bool
@@ -80,7 +81,7 @@ class ContradictionAlertSchema(BaseModel):
 
 
 class MeetingDetailSchema(BaseModel):
-    id: str
+    id: UUID
     title: str
     raw_transcript: str
     summary: Optional[str]
@@ -99,7 +100,7 @@ class MeetingDetailSchema(BaseModel):
 
 
 class MeetingSummarySchema(BaseModel):
-    id: str
+    id: UUID
     title: str
     summary: Optional[str]
     health_score: Optional[float]
@@ -122,7 +123,7 @@ class AskQuery(BaseModel):
 
 
 class AskSource(BaseModel):
-    meeting_id: str
+    meeting_id: UUID
     meeting_title: str
     chunk_index: int
     speaker: Optional[str]

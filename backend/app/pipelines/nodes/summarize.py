@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 import json
 from langchain_core.messages import HumanMessage
 from app.pipelines.state import MeetingState
@@ -26,6 +29,7 @@ async def summarize_node(state: MeetingState, llm=None) -> dict:
         response = await llm.ainvoke([HumanMessage(content=prompt)])
         summary = response.content if hasattr(response, "content") else str(response)
     except Exception as e:
+        logger.error(f"Pipeline error in summarize.py: {e}", exc_info=True)
         errors.append(f"Summarize node error: {str(e)}")
 
     return {

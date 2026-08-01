@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 from sqlalchemy import select
 from langchain_core.messages import HumanMessage
 
@@ -50,6 +53,7 @@ async def brief_node(state: MeetingState, llm=None, session=None) -> dict:
                 await session.close()
 
     except Exception as e:
+        logger.error(f"Pipeline error in brief.py: {e}", exc_info=True)
         errors.append(f"Brief node error: {str(e)}")
         brief_text = "# Pre-Meeting Brief\n## Unresolved Questions\nNone\n## Open Tasks\nNone\n## Last Decided\nNone"
 

@@ -11,7 +11,7 @@ from app.schemas import ContradictionAlertSchema
 router = APIRouter()
 
 
-@router.get("/", response_model=List[ContradictionAlertSchema])
+@router.get("", response_model=List[ContradictionAlertSchema])
 async def list_contradictions(
     include_dismissed: bool = False,
     db: AsyncSession = Depends(get_db),

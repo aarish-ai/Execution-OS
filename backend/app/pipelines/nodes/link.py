@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 from typing import Dict, Any
 from sqlalchemy import select
 from app.pipelines.state import MeetingState
@@ -33,6 +36,7 @@ async def link_node(state: MeetingState, session=None) -> dict:
                 await session.close()
 
     except Exception as e:
+        logger.error(f"Pipeline error in link.py: {e}", exc_info=True)
         errors.append(f"Link node error: {str(e)}")
 
     extraction["topic_mappings"] = topic_mappings

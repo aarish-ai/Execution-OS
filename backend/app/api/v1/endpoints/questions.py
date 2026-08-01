@@ -11,7 +11,7 @@ from app.schemas import OpenQuestionSchema
 router = APIRouter()
 
 
-@router.get("/", response_model=List[OpenQuestionSchema])
+@router.get("", response_model=List[OpenQuestionSchema])
 async def list_questions(
     unresolved_only: bool = True,
     db: AsyncSession = Depends(get_db),

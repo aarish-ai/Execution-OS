@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 import json
 import re
 from typing import Dict, Any
@@ -62,6 +65,7 @@ async def extract_node(state: MeetingState, llm=None) -> dict:
             extraction = json.loads(r_match.group(0) if r_match else repair_text)
 
     except Exception as e:
+        logger.error(f"Pipeline error in extract.py: {e}", exc_info=True)
         errors.append(f"Extract node error: {str(e)}")
 
     health_score = compute_health_score(extraction)

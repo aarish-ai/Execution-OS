@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 import uuid
 from datetime import date
 from sqlalchemy import select
@@ -149,6 +152,7 @@ async def store_node(state: MeetingState, session=None, embedder=None) -> dict:
                 await session.close()
 
     except Exception as e:
+        logger.error(f"Pipeline error in store.py: {e}", exc_info=True)
         errors.append(f"Store node error: {str(e)}")
 
     return {

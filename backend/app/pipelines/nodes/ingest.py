@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 from app.pipelines.state import MeetingState
 
 
@@ -6,6 +9,7 @@ async def ingest_node(state: MeetingState) -> dict:
     raw_transcript = state.get("raw_transcript", "")
 
     if not raw_transcript or not raw_transcript.strip():
+        logger.error(f"Pipeline error in ingest.py: {e}", exc_info=True)
         errors.append("Raw transcript is empty.")
         return {"errors": errors}
 

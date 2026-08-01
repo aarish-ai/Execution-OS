@@ -25,7 +25,7 @@ class DriftAlertResponse(BaseModel):
         from_attributes = True
 
 
-@router.get("/", response_model=List[DriftAlertResponse])
+@router.get("", response_model=List[DriftAlertResponse])
 async def list_drift_alerts(
     unresolved_only: bool = True,
     db: AsyncSession = Depends(get_db),

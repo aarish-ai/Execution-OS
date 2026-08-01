@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 import re
 from typing import List, Dict, Any
 from app.pipelines.state import MeetingState
@@ -55,6 +58,7 @@ async def parse_node(state: MeetingState) -> dict:
             })
 
     except Exception as e:
+        logger.error(f"Pipeline error in parse.py: {e}", exc_info=True)
         errors.append(f"Parse node error: {str(e)}")
 
     return {

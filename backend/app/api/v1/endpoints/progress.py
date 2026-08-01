@@ -27,7 +27,7 @@ class ProgressResponse(BaseModel):
     tasks_count: int
 
 
-@router.post("/", response_model=ProgressResponse)
+@router.post("", response_model=ProgressResponse)
 async def generate_progress_summary(
     payload: ProgressRequest,
     db: AsyncSession = Depends(get_db),

@@ -41,13 +41,15 @@ def build_graph(llm=None, session=None, embedder=None):
 
     workflow.add_node("ingest", ingest_node)
     workflow.add_node("parse", parse_node)
-    workflow.add_node("extract", lambda state: extract_node(state, llm=llm))
-    workflow.add_node("link", lambda state: link_node(state, session=session))
-    workflow.add_node("contradiction", lambda state: contradiction_node(state, llm=llm, session=session, embedder=embedder))
-    workflow.add_node("summarize", lambda state: summarize_node(state, llm=llm))
-    workflow.add_node("brief", lambda state: brief_node(state, llm=llm, session=session))
-    workflow.add_node("task_sync", lambda state: task_sync_node(state, session=session))
-    workflow.add_node("store", lambda state: store_node(state, session=session, embedder=embedder))
+    
+    from functools import partial
+    workflow.add_node("extract", partial(extract_node, llm=llm))
+    workflow.add_node("link", partial(link_node, session=session))
+    workflow.add_node("contradiction", partial(contradiction_node, llm=llm, session=session, embedder=embedder))
+    workflow.add_node("summarize", partial(summarize_node, llm=llm))
+    workflow.add_node("brief", partial(brief_node, llm=llm, session=session))
+    workflow.add_node("task_sync", partial(task_sync_node, session=session))
+    workflow.add_node("store", partial(store_node, session=session, embedder=embedder))
     workflow.add_node("error_handler", error_handler_node)
 
     workflow.set_entry_point("ingest")
